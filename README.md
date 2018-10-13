@@ -4,7 +4,8 @@ mv auto numbered name
 ## build
 ### go
 ```
-go build
+go get github.com/ynishi/mvno
+mvno
 ```
 ### docker
 ```
