@@ -1,4 +1,4 @@
-# mvno
+# mvno [![Build Status](https://travis-ci.org/ynishi/mvno.svg?branch=master)](https://travis-ci.org/ynishi/mvno)
 mv auto numbered name
 
 ## build
