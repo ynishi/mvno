@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"io/ioutil"
+	"os"
+	"testing"
+)
 
 func TestCreateName(t *testing.T) {
 	expected := "pre1.txt"
@@ -27,4 +32,34 @@ func TestCreateMoveToPath(t *testing.T) {
 	if path != expected {
 		t.Errorf("created path not matched,\n want: %v,\n have: %v", expected, path)
 	}
+}
+
+func TestMoveByCopy(t *testing.T) {
+	content := []byte("this is testfile")
+	tmpfile, err := ioutil.TempFile("", "testfile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer os.Remove(tmpfile.Name())
+	defer tmpfile.Close()
+
+	if _, err := tmpfile.Write(content); err != nil {
+		t.Fatal(err)
+	}
+	destfilename := fmt.Sprintf("%s_dest", tmpfile.Name())
+	err = moveByCopy(tmpfile.Name(), destfilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err = os.Stat(tmpfile.Name()); os.IsExist(err) {
+		t.Errorf("not deleted oldfile:%v", tmpfile.Name())
+	}
+	movedContent, err := ioutil.ReadFile(destfilename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(movedContent) != string(content) {
+		t.Errorf("not matched content,\n want:%v,\n have:%v", content, movedContent)
+	}
+
 }
