@@ -1,28 +1,28 @@
 package main
 
 import (
+	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"strconv"
 )
 
-func createMoveToPath(prefix, oldpath, newdir string) string {
-	j := 0
-	candidateFilename := createName(prefix, j, oldpath)
+func createMoveToPath(prefix string, start int, format, oldpath, newdir string) (string, int) {
+	j := start
+	candidateFilename := createName(prefix, j, format, oldpath)
 	for !isAvailable(newdir, candidateFilename) {
 		j = j + 1
-		candidateFilename = createName(prefix, j, oldpath)
+		candidateFilename = createName(prefix, j, format, oldpath)
 	}
-	return filepath.Join(newdir, candidateFilename)
+	return filepath.Join(newdir, candidateFilename), j
 }
 
-func createName(prefix string, number int, filename string) string {
-	numberStr := strconv.Itoa(number)
+func createName(prefix string, number int, numberFormat, filename string) string {
 	ext := filepath.Ext(filename)
-	created := fmt.Sprintf("%s%s%s", prefix, numberStr, ext)
+	nameFormat := "%s" + numberFormat + "%s"
+	created := fmt.Sprintf(nameFormat, prefix, number, ext)
 	return created
 }
 
@@ -80,17 +80,37 @@ func moveByCopy(oldPath, destPath string) error {
 	return nil
 }
 
-func main() {
-	if len(os.Args) < 4 {
-		log.Fatal("required args,$1:prefix,$2..n-1:target files $n: dir to move in.")
+var (
+	numFormatOpt = flag.String("format", "%d", "format of number(supported printf int)")
+	startNumOpt  = flag.Int("start", 0, "start number of filename, default:0")
+	prefixOpt    = flag.String("prefix", "", "prefix of filename, default:\"\"")
+)
+
+func init() {
+	flag.Usage = func() {
+		fmt.Fprintf(flag.CommandLine.Output(), "Usage of %s (-h):\n", os.Args[0])
+		fmt.Printf("  %s [OPTIONS] $1:..n-1(target files) $n(dir to move in)\n", os.Args[0])
+		flag.PrintDefaults()
 	}
-	newDir := os.Args[len(os.Args)-1]
-	prefix := os.Args[1]
-	for i := 2; i <= len(os.Args)-2; i++ {
-		oldPath := os.Args[i]
-		moveToPath := createMoveToPath(prefix, oldPath, newDir)
+}
+
+func main() {
+	flag.Parse()
+	args := flag.Args()
+	if len(args) < 2 {
+		flag.Usage()
+		log.Fatal("args required")
+	}
+	newDir := args[len(args)-1]
+	prefix := *prefixOpt
+	start := *startNumOpt
+	format := *numFormatOpt
+	for i := 0; i <= len(args)-2; i++ {
+		oldPath := args[i]
+		moveToPath, latest := createMoveToPath(prefix, start, format, oldPath, newDir)
+		start = latest + 1
 		if err := moveByCopy(oldPath, moveToPath); err != nil {
-			log.Fatal(fmt.Sprintf("failed to mv,from:%v:to:%v", oldPath, newDir), err)
+			log.Fatal(fmt.Sprintf("failed to mv,from:%v:to:%v:", oldPath, newDir), err)
 		}
 	}
 }
